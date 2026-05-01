@@ -28,6 +28,21 @@ DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/node -f node.Dockerfil
 echo "Building Java image..."
 DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/java -f java.Dockerfile .
 
+echo "Building Go image..."
+DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/go -f go.Dockerfile .
+
+echo "Building Rust image..."
+DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/rust -f rust.Dockerfile .
+
+echo "Building C++ image..."
+DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/cpp -f cpp.Dockerfile .
+
+echo "Building PHP image..."
+DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/php -f php.Dockerfile .
+
+echo "Building Ruby image..."
+DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/ruby -f ruby.Dockerfile .
+
 echo "Building Base image..."
 DOCKER_CONFIG="$TEMP_CONFIG" docker build -t codeblocking/base -f base.Dockerfile .
 

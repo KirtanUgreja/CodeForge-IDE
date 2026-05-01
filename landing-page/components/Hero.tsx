@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000';
+
 export default function Hero() {
     const cursorRef = useRef(null);
 
@@ -85,10 +87,10 @@ if __name__ == "__main__":
                                 </svg>
                             </div>
 
-                            <button className="flex items-center gap-2 rounded-lg bg-primary px-8 py-4 text-lg font-bold text-white transition-all animate-pulse-glow hover:scale-105 cursor-pointer">
+                            <a href={APP_URL} className="flex items-center gap-2 rounded-lg bg-primary px-8 py-4 text-lg font-bold text-white transition-all animate-pulse-glow hover:scale-105 cursor-pointer">
                                 Start Coding Free
                                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                            </button>
+                            </a>
                             <button className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-6 py-3 text-base font-bold text-white hover:bg-white/10 transition-all backdrop-blur-sm cursor-pointer">
                                 <span className="material-symbols-outlined text-sm">play_circle</span>
                                 View Demo
@@ -108,7 +110,7 @@ if __name__ == "__main__":
                         </div>
                         <div className="flex w-1/2 items-center justify-center rounded-md bg-[#0d1117] py-1 text-xs text-slate-400 font-mono border border-white/5">
                             <span className="material-symbols-outlined mr-2 text-[14px]">lock</span>
-                            codeblocking.dev/project/my-app
+                            codeforgehub.dev/project/my-app
                         </div>
                         <div className="w-16"></div>
                     </div>
@@ -154,9 +156,9 @@ if __name__ == "__main__":
                                         <span className="material-symbols-outlined text-[14px]">close</span>
                                     </div>
                                 </div>
-                                <div className="text-green-400">user@codeblocking:~/project$ <span className="text-white">python app.py</span></div>
+                                <div className="text-green-400">user@codeforgehub:~/project$ <span className="text-white">python app.py</span></div>
                                 <div className="text-slate-300">Server starting on port 8000...</div>
-                                <div className="text-green-400">user@codeblocking:~/project$ <span className="w-2 h-4 bg-slate-400 inline-block align-middle animate-pulse"></span></div>
+                                <div className="text-green-400">user@codeforgehub:~/project$ <span className="w-2 h-4 bg-slate-400 inline-block align-middle animate-pulse"></span></div>
                             </div>
                         </div>
                     </div>

@@ -4,6 +4,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listUserRepos = listUserRepos;
 exports.getRepo = getRepo;
+exports.createRepo = createRepo;
 async function listUserRepos(githubToken) {
     const repos = [];
     let page = 1;
@@ -41,6 +42,28 @@ async function getRepo(githubToken, owner, repo) {
     });
     if (!response.ok) {
         throw new Error(`GitHub API error: ${response.status}`);
+    }
+    return await response.json();
+}
+async function createRepo(githubToken, name, description = '', isPrivate = false) {
+    const response = await fetch('https://api.github.com/user/repos', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${githubToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'CodeBlocking-IDE'
+        },
+        body: JSON.stringify({
+            name,
+            description,
+            private: isPrivate,
+            auto_init: false // We will push our own files
+        })
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `GitHub API error: ${response.status}`);
     }
     return await response.json();
 }

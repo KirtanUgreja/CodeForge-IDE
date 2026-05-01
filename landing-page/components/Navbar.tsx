@@ -5,6 +5,8 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000';
+
 export default function Navbar() {
     const navRef = useRef(null);
 
@@ -29,7 +31,7 @@ export default function Navbar() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
                             <span className="material-symbols-outlined">terminal</span>
                         </div>
-                        <span className="text-lg font-bold tracking-tight font-display">CodeBlocking</span>
+                        <span className="text-lg font-bold tracking-tight font-display">Code Forge Hub</span>
                     </div>
 
                     <div className="hidden md:flex items-center gap-8">
@@ -43,10 +45,10 @@ export default function Navbar() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="hidden sm:block text-sm font-medium text-white hover:text-primary transition-colors">Sign In</button>
-                        <button className="rounded-lg bg-primary hover:bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all">
+                        <a href={APP_URL} className="hidden sm:block text-sm font-medium text-white hover:text-primary transition-colors">Sign In</a>
+                        <a href={APP_URL} className="rounded-lg bg-primary hover:bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all">
                             Start Coding
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

@@ -27,10 +27,18 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // Refreshing the auth token
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    // Refreshing the auth token — wrapped in try-catch to handle
+    // Supabase being unreachable (paused project, network issues, etc.)
+    let user = null
+    try {
+        const { data } = await supabase.auth.getUser()
+        user = data.user
+    } catch (error) {
+        // Supabase is unreachable — treat as unauthenticated
+        // This prevents the middleware from hanging for 30s+ on retries
+        console.warn('Supabase auth check failed (service may be unreachable):', 
+            error instanceof Error ? error.message : 'Unknown error')
+    }
 
     // Define protected and auth routes
     const isAuthRoute = request.nextUrl.pathname.startsWith('/login')

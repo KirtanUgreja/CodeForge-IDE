@@ -28,7 +28,7 @@ const patrickHand = Patrick_Hand({
 });
 
 export const metadata: Metadata = {
-  title: "CodeBlocking - Cloud Native IDE",
+  title: "Code Forge Hub - Cloud Native IDE",
   description: "Instant dev environments in your browser. Powered by real Linux kernels, secured by Docker containers, and synchronized with your Git workflow.",
 };
 

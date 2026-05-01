@@ -44,7 +44,7 @@ export default function CTA() {
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-2xl font-bold text-white mb-2 font-display">Self-Hostable</h3>
-                                <p className="text-slate-400">Your data, your infrastructure. Deploy CodeBlocking on your own Kubernetes cluster or VPS.</p>
+                                <p className="text-slate-400">Your data, your infrastructure. Deploy Code Forge Hub on your own Kubernetes cluster or VPS.</p>
                             </div>
                             <div className="flex flex-col items-center gap-2">
                                 <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">

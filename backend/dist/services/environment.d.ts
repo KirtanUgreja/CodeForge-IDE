@@ -1,4 +1,4 @@
-type ProjectEnvironment = 'python' | 'node' | 'multi' | 'base';
+type ProjectEnvironment = 'python' | 'node' | 'java' | 'go' | 'rust' | 'cpp' | 'php' | 'ruby' | 'multi' | 'base';
 interface EnvironmentResult {
     environment: ProjectEnvironment;
     reason: string;

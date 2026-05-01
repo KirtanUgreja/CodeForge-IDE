@@ -30,6 +30,10 @@ export declare class FileSystemService {
      */
     writeFile(filePath: string, content: string): Promise<void>;
     /**
+     * Write binary buffer to file
+     */
+    writeBuffer(filePath: string, buffer: Buffer): Promise<void>;
+    /**
      * Create a new file
      */
     createFile(filePath: string): Promise<void>;

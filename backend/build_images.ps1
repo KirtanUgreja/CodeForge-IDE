@@ -1,0 +1,9 @@
+docker build -t codeblocking/base ./images/base
+docker build -t codeblocking/node ./images/node
+docker build -t codeblocking/python ./images/python
+docker build -t codeblocking/java ./images/java
+docker build -t codeblocking/go ./images/go
+docker build -t codeblocking/rust ./images/rust
+docker build -t codeblocking/cpp ./images/cpp
+docker build -t codeblocking/php ./images/php
+docker build -t codeblocking/ruby ./images/ruby

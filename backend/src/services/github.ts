@@ -67,3 +67,36 @@ export async function getRepo(githubToken: string, owner: string, repo: string):
 
     return await response.json()
 }
+
+export async function createRepo(
+    githubToken: string,
+    name: string,
+    description: string = '',
+    isPrivate: boolean = false
+): Promise<GitHubRepo> {
+    const response = await fetch(
+        'https://api.github.com/user/repos',
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json',
+                'User-Agent': 'CodeBlocking-IDE'
+            },
+            body: JSON.stringify({
+                name,
+                description,
+                private: isPrivate,
+                auto_init: false // We will push our own files
+            })
+        }
+    )
+
+    if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || `GitHub API error: ${response.status}`)
+    }
+
+    return await response.json()
+}

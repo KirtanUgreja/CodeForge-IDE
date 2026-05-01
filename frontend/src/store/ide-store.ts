@@ -34,9 +34,20 @@ interface IdeState {
     isSidebarOpen: boolean;
     toggleSidebar: () => void;
 
+    // AI Assistant State
+    isAiOpen: boolean;
+    toggleAi: () => void;
+
     // Backend connection status
     isBackendConnected: boolean;
     setBackendConnected: (connected: boolean) => void;
+
+    // GitHub Actions
+    saveToGithub: (branchName?: string) => Promise<{ success: boolean; branch?: string; error?: string }>;
+
+    // Collaboration
+    collabProvider: any | null;
+    setCollabProvider: (provider: any | null) => void;
 }
 
 export const useIdeStore = create<IdeState>((set, get) => ({
@@ -155,8 +166,31 @@ export const useIdeStore = create<IdeState>((set, get) => ({
     isSidebarOpen: true,
     toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 
+    isAiOpen: false,
+    toggleAi: () => set((state) => ({ isAiOpen: !state.isAiOpen })),
+
     isBackendConnected: false,
     setBackendConnected: (connected) => set({ isBackendConnected: connected }),
+
+    collabProvider: null,
+    setCollabProvider: (provider) => set({ collabProvider: provider }),
+
+    saveToGithub: async (branchName) => {
+        const { projectId } = get();
+        if (!projectId) return { success: false, error: 'No project selected' };
+
+        try {
+            const response = await api.saveToGithub(projectId, branchName);
+            if (response.success && response.data) {
+                return { success: true, branch: response.data.branch };
+            }
+            const errorMsg = response.message ? `${response.error}: ${response.message}` : (response.error || 'Failed to save to GitHub');
+            return { success: false, error: errorMsg };
+        } catch (error) {
+            console.error('Failed to save to GitHub:', error);
+            return { success: false, error: 'Unknown error occurred' };
+        }
+    },
 }));
 
 // Re-export FileNode for convenience

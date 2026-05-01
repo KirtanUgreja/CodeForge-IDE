@@ -1,22 +1,56 @@
-// Files routes - API for file operations
+import { Router, Response } from 'express';
+import multer from 'multer';
+import { createFileSystemService } from '../services/fileSystem.js';
+import { getProjectPath } from '../services/git.js';
+import { AuthenticatedRequest, authMiddleware } from '../middleware/auth.js';
+import { createUserClient } from '../lib/supabase.js';
+import * as fs from 'fs';
 
-import { Router, Request, Response } from 'express';
-import { createFileSystemService } from '../services/fileSystem';
-import { getProjectPath } from '../services/git';
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
+// All routes require authentication
+router.use(authMiddleware);
+
 // Helper to get file system service for a project
-function getFileService(projectId: string) {
-    const projectPath = getProjectPath(projectId);
-    return createFileSystemService(projectPath);
+// Always resolves to the OWNER's workspace so collaborators see the real files
+async function getFileService(req: AuthenticatedRequest, projectId: string) {
+    const userId = req.user!.id;
+
+    // Always look up the real owner from the database first
+    const supabase = createUserClient(req.user!.accessToken);
+    const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('user_id')
+        .eq('id', projectId)
+        .single();
+
+    if (projectError || !project) {
+        console.log(`[FileService] ⚠️ Could not find project ${projectId}:`, projectError);
+        // Fallback to user's own path
+        const userPath = getProjectPath(userId, projectId);
+        return createFileSystemService(userPath);
+    }
+
+    // Always use the OWNER's path (owner's cloned workspace has the actual files)
+    const ownerPath = getProjectPath(project.user_id, projectId);
+    console.log(`[FileService] User ${userId.slice(0, 8)} → owner ${project.user_id.slice(0, 8)}, path: ${ownerPath}, exists: ${fs.existsSync(ownerPath)}`);
+
+    if (fs.existsSync(ownerPath)) {
+        return createFileSystemService(ownerPath);
+    }
+
+    // If owner path doesn't exist yet, fall back to user's path
+    const userPath = getProjectPath(userId, projectId);
+    return createFileSystemService(userPath);
 }
 
 // Get file tree for a project
-router.get('/tree/:projectId', async (req: Request, res: Response) => {
+router.get('/tree/:projectId', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { projectId } = req.params;
-        const fileService = getFileService(projectId);
+        const fileService = await getFileService(req, projectId);
         await fileService.ensureWorkspace();
         const tree = await fileService.getFileTree();
 
@@ -28,7 +62,7 @@ router.get('/tree/:projectId', async (req: Request, res: Response) => {
 });
 
 // Read file content
-router.get('/:projectId/read', async (req: Request, res: Response) => {
+router.get('/:projectId/read', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { projectId } = req.params;
         const { path: filePath } = req.query;
@@ -37,7 +71,7 @@ router.get('/:projectId/read', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Path is required' });
         }
 
-        const fileService = getFileService(projectId);
+        const fileService = await getFileService(req, projectId);
         const content = await fileService.readFile(filePath);
 
         res.json({ success: true, data: content });
@@ -49,7 +83,7 @@ router.get('/:projectId/read', async (req: Request, res: Response) => {
 });
 
 // Write file content
-router.post('/:projectId/write', async (req: Request, res: Response) => {
+router.post('/:projectId/write', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { projectId } = req.params;
         const { path: filePath, content } = req.body;
@@ -58,7 +92,7 @@ router.post('/:projectId/write', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Path is required' });
         }
 
-        const fileService = getFileService(projectId);
+        const fileService = await getFileService(req, projectId);
         await fileService.writeFile(filePath, content || '');
 
         res.json({ success: true, message: 'File saved' });
@@ -70,7 +104,7 @@ router.post('/:projectId/write', async (req: Request, res: Response) => {
 });
 
 // Create file or folder
-router.post('/:projectId/create', async (req: Request, res: Response) => {
+router.post('/:projectId/create', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { projectId } = req.params;
         const { path: itemPath, type } = req.body;
@@ -79,7 +113,7 @@ router.post('/:projectId/create', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Path is required' });
         }
 
-        const fileService = getFileService(projectId);
+        const fileService = await getFileService(req, projectId);
 
         if (type === 'folder') {
             await fileService.createFolder(itemPath);
@@ -96,7 +130,7 @@ router.post('/:projectId/create', async (req: Request, res: Response) => {
 });
 
 // Delete file or folder
-router.delete('/:projectId/delete', async (req: Request, res: Response) => {
+router.delete('/:projectId/delete', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { projectId } = req.params;
         const { path: itemPath } = req.query;
@@ -105,13 +139,37 @@ router.delete('/:projectId/delete', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Path is required' });
         }
 
-        const fileService = getFileService(projectId);
+        const fileService = await getFileService(req, projectId);
         await fileService.delete(itemPath);
 
         res.json({ success: true, message: 'Item deleted' });
     } catch (error: unknown) {
         console.error('Error deleting item:', error);
         const message = error instanceof Error ? error.message : 'Failed to delete item';
+        res.status(500).json({ success: false, error: message });
+    }
+});
+
+// Upload file
+router.post('/:projectId/upload', upload.single('file'), async (req: any, res: Response) => {
+    try {
+        const { projectId } = req.params;
+        const { path: dirPath } = req.body;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ success: false, error: 'No file uploaded' });
+        }
+
+        const fileService = await getFileService(req, projectId);
+        const filePath = dirPath ? `${dirPath}/${file.originalname}` : file.originalname;
+
+        await fileService.writeBuffer(filePath, file.buffer);
+
+        res.json({ success: true, message: 'File uploaded successfully' });
+    } catch (error: unknown) {
+        console.error('Error uploading file:', error);
+        const message = error instanceof Error ? error.message : 'Failed to upload file';
         res.status(500).json({ success: false, error: message });
     }
 });

@@ -97,6 +97,19 @@ class FileSystemService {
         await promises_1.default.writeFile(fullPath, content, 'utf-8');
     }
     /**
+     * Write binary buffer to file
+     */
+    async writeBuffer(filePath, buffer) {
+        const fullPath = path_1.default.join(this.workspaceRoot, filePath);
+        const normalizedPath = path_1.default.normalize(fullPath);
+        if (!normalizedPath.startsWith(this.workspaceRoot)) {
+            throw new Error('Access denied: Path traversal detected');
+        }
+        // Ensure parent directory exists
+        await promises_1.default.mkdir(path_1.default.dirname(fullPath), { recursive: true });
+        await promises_1.default.writeFile(fullPath, buffer);
+    }
+    /**
      * Create a new file
      */
     async createFile(filePath) {

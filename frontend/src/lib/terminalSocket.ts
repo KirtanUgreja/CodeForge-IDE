@@ -11,11 +11,13 @@ class TerminalSocket {
     private onExitCallback: ((info: { exitCode: number; signal?: string }) => void) | null = null;
     private projectId: string | null = null;
     private authToken: string | null = null;
+    private userId: string | null = null;
     private environment: string = 'base';
 
-    setAuth(projectId: string, authToken: string, environment?: string): void {
+    setAuth(projectId: string, authToken: string, userId: string, environment?: string): void {
         this.projectId = projectId;
         this.authToken = authToken;
+        this.userId = userId;
         this.environment = environment || 'base';
     }
 
@@ -26,6 +28,7 @@ class TerminalSocket {
             transports: ['websocket', 'polling'],
             auth: {
                 token: this.authToken,
+                userId: this.userId,
                 projectId: this.projectId,
                 environment: this.environment,
             },
@@ -38,6 +41,18 @@ class TerminalSocket {
 
         this.socket.on('terminal:ready', () => {
             console.log('Terminal ready');
+            this.onReadyCallback?.();
+        });
+
+        this.socket.on('terminal:ready', (data: { ports?: Record<number, number> }) => {
+            console.log('Terminal ready with ports:', data.ports);
+            if (data.ports) {
+                console.log('Port mappings:');
+                Object.entries(data.ports).forEach(([containerPort, hostPort]) => {
+                    console.log(`  Container port ${containerPort} -> Host port ${hostPort}`);
+                    console.log(`  Access at: http://localhost:${hostPort}`);
+                });
+            }
             this.onReadyCallback?.();
         });
 

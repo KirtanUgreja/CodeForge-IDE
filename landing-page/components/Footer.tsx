@@ -92,7 +92,7 @@ export default function Footer() {
                         <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/20 text-primary">
                             <span className="material-symbols-outlined text-[14px]">terminal</span>
                         </div>
-                        <span>© 2026 CodeBlocking Inc.</span>
+                        <span>© 2026 Code Forge Hub Inc.</span>
                     </div>
                     <div className="flex gap-6">
                         <a className="hover:text-slate-400" href="#">Privacy Policy</a>
