@@ -75,25 +75,52 @@ export function initializeTerminalService(io: SocketIOServer): void {
                 console.log(`[Terminal] Creating session for user ${userId}, project ${projectId}`);
 
                 // Resolve the specific project directory for validation
-                const projectPath = getProjectPath(userId, projectId);
+                // For collaborators, the project's files live in the owner's workspace.
+                const { supabaseAdmin } = await import('../lib/supabase.js');
+                const { data: project, error: projectErr } = await supabaseAdmin
+                    .from('projects')
+                    .select('user_id')
+                    .eq('id', projectId)
+                    .single();
 
-                if (!fs.existsSync(projectPath)) {
+                if (projectErr || !project) {
+                    socket.emit('terminal:error', { message: 'Project not found in database.' });
+                    return;
+                }
+
+                const ownerPath = getProjectPath(project.user_id, projectId);
+                const userPath = getProjectPath(userId, projectId);
+
+                // Prefer the owner's cloned project directory if it exists (shared clone)
+                let projectPath: string;
+                if (fs.existsSync(ownerPath)) {
+                    projectPath = ownerPath;
+                } else if (fs.existsSync(userPath)) {
+                    // Fallback to user's own clone (if they cloned it themselves)
+                    projectPath = userPath;
+                } else {
+                    // If owner hasn't cloned and current socket user isn't the owner, ask owner to open it.
+                    if (userId !== project.user_id) {
+                        socket.emit('terminal:error', { message: 'Project not found. Please ask the project owner to open this project first.' });
+                        return;
+                    }
+
+                    // Owner hasn't cloned the project yet; require them to open it via the web UI first.
                     socket.emit('terminal:error', { message: 'Project not found. Please open the project first.' });
                     return;
                 }
 
                 const files = fs.readdirSync(projectPath);
-                console.log(`[Terminal] Files in project:`, files);
+                console.log(`[Terminal] Files in project (${projectPath}):`, files);
 
                 // Prefer the saved project environment, then fall back to file detection.
-                const { supabaseAdmin } = await import('../lib/supabase.js');
-                const { data: project } = await supabaseAdmin
+                const { data: projectEnv } = await supabaseAdmin
                     .from('projects')
                     .select('environment')
                     .eq('id', projectId)
                     .single();
 
-                let language = project?.environment;
+                let language = projectEnv?.environment;
 
                 if (!language || language === 'base') {
                     const { detectEnvironment } = await import('./environment.js');
@@ -104,18 +131,21 @@ export function initializeTerminalService(io: SocketIOServer): void {
                     console.log(`[Terminal] Using project environment from DB: ${language}`);
                 }
 
-                // The entire user workspace is mounted at /workspace inside the container.
-                // Each project lives at /workspace/<projectId>.
-                const userWorkspacePath = getUserWorkspacePath(userId);
+                // Containers mount the owner's workspace at /workspace so the project
+                // subdirectory must exist inside the container. For collaborator sessions
+                // we should reuse (or spawn) the owner's container so /workspace/<projectId>
+                // is available.
+                const containerOwnerId = project.user_id;
+                const ownerWorkspacePath = getUserWorkspacePath(containerOwnerId);
 
-                // Get the shared container for this language, or spawn one
-                let containerInfo = await getContainer(userId, language);
+                // Try to reuse the owner's container first (so collaborators share the same files)
+                let containerInfo = await getContainer(containerOwnerId, language);
 
                 if (!containerInfo) {
-                    console.log(`[Terminal] Spawning ${language} container for user ${userId}`);
-                    containerInfo = await spawnContainer(userId, language, userWorkspacePath);
+                    console.log(`[Terminal] Spawning ${language} container for owner ${containerOwnerId}`);
+                    containerInfo = await spawnContainer(containerOwnerId, language, ownerWorkspacePath, projectId);
                 } else {
-                    console.log(`[Terminal] Reusing existing ${language} container for user ${userId}`);
+                    console.log(`[Terminal] Reusing existing ${language} container for owner ${containerOwnerId}`);
                 }
 
                 const container = docker.getContainer(containerInfo.containerId);

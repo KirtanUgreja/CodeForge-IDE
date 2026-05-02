@@ -113,6 +113,24 @@ export default function IdeLayout() {
 
         if (result.success) {
             alert(`✅ Changes saved successfully to branch: ${result.branch}`);
+            // Ask backend to close/stop the owner's container for this project
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+                if (projectId && authTokenRef.current) {
+                    await fetch(`${apiUrl}/api/projects/${projectId}/close`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authTokenRef.current}`,
+                            'Content-Type': 'application/json',
+                            'X-GitHub-Token': providerTokenRef.current || ''
+                        },
+                        keepalive: true
+                    }).catch(() => { /* ignore errors */ });
+                }
+            } catch (e) {
+                // ignore
+            }
+
             router.push('/dashboard');
         } else {
             // Show more detailed error message if available
@@ -121,6 +139,23 @@ export default function IdeLayout() {
             setIsSaving(false);
         }
     };
+
+    // When navigating away or unmounting, attempt to close the project container (best-effort)
+    useEffect(() => {
+        return () => {
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+                if (projectId && authTokenRef.current) {
+                    navigator.sendBeacon(
+                        `${apiUrl}/api/projects/${projectId}/close`,
+                        JSON.stringify({})
+                    );
+                }
+            } catch (e) {
+                // best effort only
+            }
+        }
+    }, [projectId]);
 
     // Store handlers in refs - updated in effect
     const handlersRef = useRef({

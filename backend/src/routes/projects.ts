@@ -4,6 +4,7 @@ import path from 'path'
 import { AuthenticatedRequest, authMiddleware } from '../middleware/auth.js'
 import { createUserClient } from '../lib/supabase.js'
 import { cloneRepository, deleteProject, getProjectPath, createAndPushBranch, initAndPushRepo } from '../services/git.js'
+import { stopContainer } from '../services/container.js'
 import { createRepo } from '../services/github.js'
 import { detectEnvironment } from '../services/environment.js'
 import * as fs from 'fs'
@@ -218,6 +219,44 @@ router.get('/:id/open', async (req: AuthenticatedRequest, res) => {
     } catch (error) {
         console.error('Error in GET /projects/:id/open:', error)
         return res.status(500).json({ error: 'Failed to open project' })
+    }
+})
+
+// POST /api/projects/:id/close - Close a project (owner can request container stop)
+router.post('/:id/close', async (req: AuthenticatedRequest, res) => {
+    try {
+        const { id } = req.params
+        const supabase = createUserClient(req.user!.accessToken)
+
+        const { data: project, error } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error || !project) {
+            return res.status(404).json({ error: 'Project not found' })
+        }
+
+        // Only the project owner should be allowed to stop their containers
+        if (req.user!.id !== project.user_id) {
+            return res.status(403).json({ error: 'Only the project owner can close this project' })
+        }
+
+        const language = project.environment || 'base'
+
+        try {
+            await stopContainer(req.user!.id, language)
+            console.log(`[Projects] Stopped container for user ${req.user!.id} language ${language} on close request`)
+        } catch (err) {
+            console.error('[Projects] Error stopping container on close:', err)
+            // Continue; we still return success since the project is considered closed
+        }
+
+        return res.json({ success: true })
+    } catch (error) {
+        console.error('Error in POST /projects/:id/close:', error)
+        return res.status(500).json({ error: 'Failed to close project' })
     }
 })
 

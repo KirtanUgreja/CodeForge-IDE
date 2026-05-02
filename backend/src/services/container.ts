@@ -204,12 +204,33 @@ export async function forceStopContainer(userId: string, language: string): Prom
 export async function spawnContainer(
     userId: string,
     language: string,
-    userWorkspacePath: string   // e.g. ~/.codeblocking/workspaces/<userId>
+    userWorkspacePath: string,   // e.g. ~/.codeblocking/workspaces/<userId>
+    projectId?: string
 ): Promise<ContainerInfo> {
     // Reuse existing container if it is still running
+    // First try direct lookup for this user/language
     const existing = await getContainer(userId, language);
     if (existing) {
         return existing;
+    }
+
+    // If a projectId is provided, prefer any existing container (any user)
+    // whose mounted workspace already contains the project directory. This
+    // prevents spawning duplicate containers for collaborators when the
+    // owner's container already has the project mounted.
+    if (projectId) {
+        for (const [, info] of activeContainers) {
+            if (info.environment !== language) continue;
+            try {
+                const candidateProjectPath = path.join(info.projectPath, projectId);
+                if (fs.existsSync(candidateProjectPath)) {
+                    console.log(`[Container] Reusing container ${info.containerId.substring(0,12)} because it contains project ${projectId}`);
+                    return info;
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
     }
 
     const key = getContainerKey(userId, language);
