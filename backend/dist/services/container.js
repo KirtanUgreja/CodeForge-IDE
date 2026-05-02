@@ -174,12 +174,33 @@ async function forceStopContainer(userId, language) {
  *
  * This means two Python projects share one container instead of two.
  */
-async function spawnContainer(userId, language, userWorkspacePath // e.g. ~/.codeblocking/workspaces/<userId>
-) {
+async function spawnContainer(userId, language, userWorkspacePath, // e.g. ~/.codeblocking/workspaces/<userId>
+projectId) {
     // Reuse existing container if it is still running
+    // First try direct lookup for this user/language
     const existing = await getContainer(userId, language);
     if (existing) {
         return existing;
+    }
+    // If a projectId is provided, prefer any existing container (any user)
+    // whose mounted workspace already contains the project directory. This
+    // prevents spawning duplicate containers for collaborators when the
+    // owner's container already has the project mounted.
+    if (projectId) {
+        for (const [, info] of activeContainers) {
+            if (info.environment !== language)
+                continue;
+            try {
+                const candidateProjectPath = path_1.default.join(info.projectPath, projectId);
+                if (fs_1.default.existsSync(candidateProjectPath)) {
+                    console.log(`[Container] Reusing container ${info.containerId.substring(0, 12)} because it contains project ${projectId}`);
+                    return info;
+                }
+            }
+            catch (err) {
+                // ignore
+            }
+        }
     }
     const key = getContainerKey(userId, language);
     const imageName = ENVIRONMENT_IMAGES[language] || 'codeblocking/base';

@@ -21,7 +21,8 @@ export declare function forceStopContainer(userId: string, language: string): Pr
  *
  * This means two Python projects share one container instead of two.
  */
-export declare function spawnContainer(userId: string, language: string, userWorkspacePath: string): Promise<ContainerInfo>;
+export declare function spawnContainer(userId: string, language: string, userWorkspacePath: string, // e.g. ~/.codeblocking/workspaces/<userId>
+projectId?: string): Promise<ContainerInfo>;
 export declare function execInContainer(userId: string, language: string): Promise<Docker.Exec | null>;
 export declare function stopContainer(userId: string, language: string): Promise<void>;
 /**

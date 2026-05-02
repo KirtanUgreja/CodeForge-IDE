@@ -82,7 +82,8 @@ export async function pullRepository(projectPath: string, githubToken?: string):
         if (currentBranch === 'autosave' && !hasLocalChanges) {
             try {
                 const remoteInfo = await git.remote(['show', 'origin'])
-                const match = remoteInfo.match(/HEAD branch: (.*)/)
+                const remoteInfoText = typeof remoteInfo === 'string' ? remoteInfo : ''
+                const match = remoteInfoText.match(/HEAD branch: (.*)/)
                 const defaultBranch = match ? match[1].trim() : 'main'
 
                 console.log(`[GitService] On 'autosave' branch with no local changes. Switching to default branch: ${defaultBranch}`)

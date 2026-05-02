@@ -91,9 +91,22 @@ export default function AiAssistant() {
             }
         } catch (error: any) {
             console.error("AI Assistant Error:", error);
+            const rawMessage = error?.message || "Failed to get AI response";
+            const lower = rawMessage.toLowerCase();
+
+            let friendlyMessage = `⚠️ Error: ${rawMessage}`;
+
+            if (lower.includes('429')) {
+                friendlyMessage = '⚠️ OpenRouter rate limit or quota reached (429). Please wait and try again, or check your OpenRouter credits/limits.';
+            } else if (lower.includes('401') || lower.includes('unauthorized')) {
+                friendlyMessage = '⚠️ OpenRouter authentication failed (401). Check `OPENROUTER_API_KEY` in backend `.env`, then restart the backend server.';
+            } else if (lower.includes('openrouter_api_key is not configured')) {
+                friendlyMessage = '⚠️ `OPENROUTER_API_KEY` is missing in backend `.env`. Add it and restart the backend server.';
+            }
+
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
-                content: `⚠️ Error: ${error.message}. Make sure OPENROUTER_API_KEY is set in the backend .env file.` 
+                content: friendlyMessage
             }]);
         } finally {
             setIsLoading(false);

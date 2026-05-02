@@ -2,7 +2,7 @@ import 'dotenv/config'
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = 'google/gemma-3n-e2b-it:free';
+const OPENROUTER_MODEL = 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free';
 
 const SYSTEM_PROMPT = `
 You are an expert AI Coding Assistant.
@@ -43,8 +43,24 @@ export async function chatWithAI(messages: any[]) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('[AI Service] Response Error:', errorText);
-            throw new Error(`OpenRouter API error: ${response.status}`);
+            let upstreamMessage = '';
+
+            try {
+                const parsed = JSON.parse(errorText);
+                upstreamMessage = parsed?.error?.message || parsed?.message || '';
+            } catch {
+                upstreamMessage = errorText;
+            }
+
+            const message = upstreamMessage
+                ? `OpenRouter API error: ${response.status} - ${upstreamMessage}`
+                : `OpenRouter API error: ${response.status}`;
+
+            console.error('[AI Service] Response Error:', message);
+
+            const apiError = new Error(message) as Error & { status?: number };
+            apiError.status = response.status;
+            throw apiError;
         }
 
         const data = await response.json();

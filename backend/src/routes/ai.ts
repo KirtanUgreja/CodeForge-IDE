@@ -19,7 +19,8 @@ router.post('/chat', async (req: AuthenticatedRequest, res) => {
         res.json({ success: true, message: aiResponse })
     } catch (error: any) {
         console.error('[AI Route] Error:', error)
-        res.status(500).json({ success: false, error: error.message || 'AI request failed' })
+        const statusCode = typeof error?.status === 'number' ? error.status : 500
+        res.status(statusCode).json({ success: false, error: error.message || 'AI request failed' })
     }
 })
 

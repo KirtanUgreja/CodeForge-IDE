@@ -5,6 +5,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.listUserRepos = listUserRepos;
 exports.getRepo = getRepo;
 exports.createRepo = createRepo;
+function normalizeRepoName(name) {
+    return name
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9._-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
 async function listUserRepos(githubToken) {
     const repos = [];
     let page = 1;
@@ -46,6 +55,10 @@ async function getRepo(githubToken, owner, repo) {
     return await response.json();
 }
 async function createRepo(githubToken, name, description = '', isPrivate = false) {
+    const repoName = normalizeRepoName(name);
+    if (!repoName) {
+        throw new Error('Repository name must contain at least one letter or number');
+    }
     const response = await fetch('https://api.github.com/user/repos', {
         method: 'POST',
         headers: {
@@ -55,15 +68,29 @@ async function createRepo(githubToken, name, description = '', isPrivate = false
             'User-Agent': 'CodeBlocking-IDE'
         },
         body: JSON.stringify({
-            name,
+            name: repoName,
             description,
             private: isPrivate,
             auto_init: false // We will push our own files
         })
     });
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `GitHub API error: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = errorText || `GitHub API error: ${response.status}`;
+        try {
+            const error = JSON.parse(errorText);
+            const details = Array.isArray(error.errors)
+                ? error.errors.map((entry) => entry?.message || entry?.code || JSON.stringify(entry)).filter(Boolean).join('; ')
+                : '';
+            errorMessage = error.message || errorMessage;
+            if (details) {
+                errorMessage = `${errorMessage}${errorMessage.endsWith('.') ? '' : '.'} ${details}`;
+            }
+        }
+        catch {
+            // Fall back to the raw response body when GitHub returns non-JSON payloads.
+        }
+        throw new Error(errorMessage);
     }
     return await response.json();
 }

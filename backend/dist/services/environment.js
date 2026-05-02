@@ -37,8 +37,38 @@ exports.detectEnvironment = detectEnvironment;
 exports.getContainerImage = getContainerImage;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const IGNORED_DIRECTORIES = new Set([
+    '.git',
+    '.next',
+    '.venv',
+    'node_modules',
+    'dist',
+    'build',
+    'out',
+    '__pycache__',
+    'venv'
+]);
+function scanProjectFiles(projectPath, maxDepth = 3) {
+    const discoveredFiles = [];
+    function walk(currentPath, depth) {
+        if (depth > maxDepth)
+            return;
+        const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                if (IGNORED_DIRECTORIES.has(entry.name))
+                    continue;
+                walk(path.join(currentPath, entry.name), depth + 1);
+                continue;
+            }
+            discoveredFiles.push(entry.name);
+        }
+    }
+    walk(projectPath, 0);
+    return discoveredFiles;
+}
 function detectEnvironment(projectPath) {
-    const files = fs.readdirSync(projectPath);
+    const files = scanProjectFiles(projectPath);
     // Check root level
     const hasPython = files.includes('requirements.txt') ||
         files.includes('setup.py') ||

@@ -42,6 +42,7 @@ const path_1 = __importDefault(require("path"));
 const auth_js_1 = require("../middleware/auth.js");
 const supabase_js_1 = require("../lib/supabase.js");
 const git_js_1 = require("../services/git.js");
+const container_js_1 = require("../services/container.js");
 const github_js_1 = require("../services/github.js");
 const fs = __importStar(require("fs"));
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
@@ -204,7 +205,7 @@ router.get('/:id/open', async (req, res) => {
             // Project is already cloned, attempt to pull latest changes
             try {
                 const githubToken = req.user?.providerToken;
-                await pullRepository(projectPath, githubToken);
+                await (0, git_js_1.pullRepository)(projectPath, githubToken);
                 console.log(`[GitService] Auto-pulled latest changes for project ${id} (User: ${req.user.id})`);
             }
             catch (pullError) {
@@ -225,6 +226,39 @@ router.get('/:id/open', async (req, res) => {
     catch (error) {
         console.error('Error in GET /projects/:id/open:', error);
         return res.status(500).json({ error: 'Failed to open project' });
+    }
+});
+// POST /api/projects/:id/close - Close a project (owner can request container stop)
+router.post('/:id/close', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const supabase = (0, supabase_js_1.createUserClient)(req.user.accessToken);
+        const { data: project, error } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error || !project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+        // Only the project owner should be allowed to stop their containers
+        if (req.user.id !== project.user_id) {
+            return res.status(403).json({ error: 'Only the project owner can close this project' });
+        }
+        const language = project.environment || 'base';
+        try {
+            await (0, container_js_1.stopContainer)(req.user.id, language);
+            console.log(`[Projects] Stopped container for user ${req.user.id} language ${language} on close request`);
+        }
+        catch (err) {
+            console.error('[Projects] Error stopping container on close:', err);
+            // Continue; we still return success since the project is considered closed
+        }
+        return res.json({ success: true });
+    }
+    catch (error) {
+        console.error('Error in POST /projects/:id/close:', error);
+        return res.status(500).json({ error: 'Failed to close project' });
     }
 });
 // POST /api/projects/:id/save - Save changes to a new branch on GitHub
