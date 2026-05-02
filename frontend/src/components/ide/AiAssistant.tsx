@@ -17,7 +17,7 @@ export default function AiAssistant() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [model, setModel] = useState("google/gemini-2.0-flash-001");
+    const model = "google/gemma-3n-e2b-it:free";
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { activeFile, activeFileContent, fileTree } = useIdeStore();
 
@@ -112,21 +112,9 @@ export default function AiAssistant() {
                         <h3 className="text-sm font-bold text-white tracking-tight">AI Assistant</h3>
                         <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                            {model.split('/')[1] || model}
+                            {model}
                         </p>
                     </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <select 
-                        value={model} 
-                        onChange={(e) => setModel(e.target.value)}
-                        className="bg-white/5 border border-white/10 rounded-md text-[10px] text-slate-300 px-2 py-1 outline-none hover:bg-white/10 transition-colors"
-                    >
-                        <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
-                        <option value="openai/gpt-4o">GPT-4o</option>
-                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                        <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
-                    </select>
                 </div>
             </div>
 

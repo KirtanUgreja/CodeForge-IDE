@@ -313,8 +313,7 @@ export default function CodeEditor() {
 
         const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
-        const provider = monaco.languages.registerInlineCompletionsProvider({
-            pattern: '**',
+        const provider = monaco.languages.registerInlineCompletionsProvider('*', {
             provideInlineCompletions: async (model, position, context, token) => {
                 // Delay to avoid spamming while typing
                 await new Promise(resolve => setTimeout(resolve, 300));
@@ -377,7 +376,7 @@ export default function CodeEditor() {
 
                 return { items: [] };
             },
-            freeInlineCompletions: () => {}
+            disposeInlineCompletions: () => {}
         });
 
         return () => provider.dispose();
@@ -554,7 +553,7 @@ export default function CodeEditor() {
                         formatOnPaste: true,
                         bracketPairColorization: { enabled: true },
                         guides: { bracketPairs: true, indentation: true },
-                        inlineSuggest: { enabled: true, mode: 'always' },
+                        inlineSuggest: { enabled: true, mode: 'subwordSmart' },
                         suggest: { preview: true }
                     }}
                 />

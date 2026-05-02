@@ -8,8 +8,43 @@ interface EnvironmentResult {
     reason: string
 }
 
+const IGNORED_DIRECTORIES = new Set([
+    '.git',
+    '.next',
+    '.venv',
+    'node_modules',
+    'dist',
+    'build',
+    'out',
+    '__pycache__',
+    'venv'
+])
+
+function scanProjectFiles(projectPath: string, maxDepth = 3): string[] {
+    const discoveredFiles: string[] = []
+
+    function walk(currentPath: string, depth: number): void {
+        if (depth > maxDepth) return
+
+        const entries = fs.readdirSync(currentPath, { withFileTypes: true })
+
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                if (IGNORED_DIRECTORIES.has(entry.name)) continue
+                walk(path.join(currentPath, entry.name), depth + 1)
+                continue
+            }
+
+            discoveredFiles.push(entry.name)
+        }
+    }
+
+    walk(projectPath, 0)
+    return discoveredFiles
+}
+
 export function detectEnvironment(projectPath: string): EnvironmentResult {
-    const files = fs.readdirSync(projectPath)
+    const files = scanProjectFiles(projectPath)
 
     // Check root level
     const hasPython =

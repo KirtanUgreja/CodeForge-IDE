@@ -76,6 +76,16 @@ export default function DashboardView({ user }: DashboardViewProps) {
         }
     }
 
+    const normalizeRepoName = (name: string): string => {
+        return name
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9._-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '')
+    }
+
     useEffect(() => {
         const fetchProjects = async () => {
             try {
@@ -262,6 +272,12 @@ export default function DashboardView({ user }: DashboardViewProps) {
                 return
             }
 
+            const repoName = normalizeRepoName(newRepoName)
+            if (!repoName) {
+                alert('Please enter a valid project name with letters or numbers.')
+                return
+            }
+
             const createRes = await fetch('https://api.github.com/user/repos', {
                 method: 'POST',
                 headers: {
@@ -270,7 +286,7 @@ export default function DashboardView({ user }: DashboardViewProps) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: newRepoName.trim(),
+                    name: repoName,
                     description: newRepoDescription,
                     private: newRepoPrivate,
                     auto_init: true
@@ -278,8 +294,24 @@ export default function DashboardView({ user }: DashboardViewProps) {
             })
 
             if (!createRes.ok) {
-                const error = await createRes.json()
-                alert(`Failed to create repo: ${error.message || 'Unknown error'}`)
+                const errorText = await createRes.text()
+                let errorMessage = errorText || 'Unknown error'
+
+                try {
+                    const errorData = JSON.parse(errorText)
+                    const details = Array.isArray(errorData.errors)
+                        ? errorData.errors.map((entry: any) => entry?.message || entry?.code || JSON.stringify(entry)).filter(Boolean).join('; ')
+                        : ''
+
+                    errorMessage = errorData.message || errorMessage
+                    if (details) {
+                        errorMessage = `${errorMessage}${errorMessage.endsWith('.') ? '' : '.'} ${details}`
+                    }
+                } catch {
+                    // Use the raw response text when GitHub returns non-JSON payloads.
+                }
+
+                alert(`Failed to create repo: ${errorMessage}`)
                 return
             }
 
@@ -295,7 +327,7 @@ export default function DashboardView({ user }: DashboardViewProps) {
                 body: JSON.stringify({
                     repoUrl: newRepo.clone_url,
                     repoFullName: newRepo.full_name,
-                    name: newRepo.name,
+                    name: newRepoName.trim(),
                     isPrivate: newRepo.private,
                     environment: newRepoEnvironment
                 })

@@ -2,6 +2,7 @@ import 'dotenv/config'
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODEL = 'google/gemma-3n-e2b-it:free';
 
 const SYSTEM_PROMPT = `
 You are an expert AI Coding Assistant.
@@ -12,7 +13,7 @@ You are an expert AI Coding Assistant.
 - Be technical, concise, and extremely helpful.
 `;
 
-export async function chatWithAI(messages: any[], model: string = 'google/gemini-2.0-flash-001') {
+export async function chatWithAI(messages: any[]) {
     if (!OPENROUTER_API_KEY) {
         throw new Error('OPENROUTER_API_KEY is not configured in .env');
     }
@@ -33,7 +34,7 @@ export async function chatWithAI(messages: any[], model: string = 'google/gemini
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: model,
+                model: OPENROUTER_MODEL,
                 messages: fullMessages,
                 temperature: 0.7,
                 max_tokens: 2048,
@@ -90,7 +91,7 @@ Rules:
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'google/gemini-2.0-flash-001',
+                model: OPENROUTER_MODEL,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.1,
                 max_tokens: 256,

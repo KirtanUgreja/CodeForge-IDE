@@ -9,13 +9,13 @@ router.use(authMiddleware)
 
 router.post('/chat', async (req: AuthenticatedRequest, res) => {
     try {
-        const { messages, model } = req.body
+        const { messages } = req.body
         
         if (!messages || !Array.isArray(messages)) {
             return res.status(400).json({ success: false, error: 'Messages array is required' })
         }
 
-        const aiResponse = await chatWithAI(messages, model)
+        const aiResponse = await chatWithAI(messages)
         res.json({ success: true, message: aiResponse })
     } catch (error: any) {
         console.error('[AI Route] Error:', error)

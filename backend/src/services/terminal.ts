@@ -85,11 +85,24 @@ export function initializeTerminalService(io: SocketIOServer): void {
                 const files = fs.readdirSync(projectPath);
                 console.log(`[Terminal] Files in project:`, files);
 
-                // --- Detect language FIRST so we can look up the shared container ---
-                const { detectEnvironment } = await import('./environment.js');
-                const detected = detectEnvironment(projectPath);
-                const language = detected.environment;
-                console.log(`[Terminal] Detected environment: ${language} (${detected.reason})`);
+                // Prefer the saved project environment, then fall back to file detection.
+                const { supabaseAdmin } = await import('../lib/supabase.js');
+                const { data: project } = await supabaseAdmin
+                    .from('projects')
+                    .select('environment')
+                    .eq('id', projectId)
+                    .single();
+
+                let language = project?.environment;
+
+                if (!language || language === 'base') {
+                    const { detectEnvironment } = await import('./environment.js');
+                    const detected = detectEnvironment(projectPath);
+                    language = detected.environment !== 'base' ? detected.environment : (language || 'base');
+                    console.log(`[Terminal] Detected environment: ${language} (${detected.reason})`);
+                } else {
+                    console.log(`[Terminal] Using project environment from DB: ${language}`);
+                }
 
                 // The entire user workspace is mounted at /workspace inside the container.
                 // Each project lives at /workspace/<projectId>.
